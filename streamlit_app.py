@@ -48,7 +48,7 @@ def range_to_df(ws, remove_nan=True):
 
 # Layout
 st.set_page_config(layout="wide")
-st.title('Fenced Offers - Upload and KACHOW')
+st.title('Fenced Offers - Upload and KACHOW!!!')
 passwd = st.text_input('Enter Password')
 if passwd == 'lightning':
     st.markdown('We process **faster** than lightning!')
