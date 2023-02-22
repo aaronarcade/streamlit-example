@@ -22,7 +22,7 @@ import xlsxwriter
 #
 # '''
 
-
+promo = "FLR"
 row_ct = {}
 
 # balloons = False
@@ -108,12 +108,12 @@ if passwd == 'lightning':
         wb = load_workbook(filename = uploaded_file, data_only=True)
 
         # pull Pricing cache file
-        filename = "FO_Pricing_Cache.xlsx"
-        pricing_wb = load_workbook(filename = uploaded_file, data_only=True)
-        pricing_ws = pricing_wb['Cabins']
-        pricing_rg = range_to_df(pricing_ws['A4':'V500'])
-
-        print(pricing_rg)
+        # filename = "FO_Pricing_Cache.xlsx"
+        # pricing_wb = load_workbook(filename = uploaded_file, data_only=True)
+        # pricing_ws = pricing_wb['Cabins']
+        # pricing_rg = range_to_df(pricing_ws['A4':'V500'])
+        #
+        # print(pricing_rg)
 
         #TODO: multiple sheets (one per offer, 'sail' in promoted fills in the lower table row 28, excluding G-J pricing)
 
