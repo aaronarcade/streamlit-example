@@ -249,9 +249,9 @@ if passwd == 'lightning':
         ts.title = sheet_name
         tb.save("temp_"+sheet_name)
 
-        # Executive Summary
-        es.title = sheet_name
-        eb.save("exec_"+sheet_name)
+        # # Executive Summary
+        # es.title = sheet_name
+        # eb.save("exec_"+sheet_name)
 
 
         st.success("KACHOW we're done! - - - Download offer sheets below.")
