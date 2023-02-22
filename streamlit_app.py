@@ -25,7 +25,7 @@ import xlsxwriter
 promo = "FLR"
 row_ct = {}
 
-# balloons = False
+balloons = False
 clicked = 'https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/d3789c8c-0874-407c-a457-03b147f59b18/der4qbq-d8305001-dc6d-441e-ab8c-132b6f35fe63.png/v1/fill/w_1176,h_627,strp/lighting_mcqueen_by_darkmoonanimation_der4qbq-fullview.png?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9NjI3IiwicGF0aCI6IlwvZlwvZDM3ODljOGMtMDg3NC00MDdjLWE0NTctMDNiMTQ3ZjU5YjE4XC9kZXI0cWJxLWQ4MzA1MDAxLWRjNmQtNDQxZS1hYjhjLTEzMmI2ZjM1ZmU2My5wbmciLCJ3aWR0aCI6Ijw9MTE3NiJ9XV0sImF1ZCI6WyJ1cm46c2VydmljZTppbWFnZS5vcGVyYXRpb25zIl19.1kNCLY8PHLdG7veIX1SA9cSn8HgDT0DeYvtJUSVNXTo'
 
 # Convert cell range to pandas df
@@ -43,8 +43,8 @@ def range_to_df(ws, remove_nan=True):
         df.dropna(axis=1, how='all', inplace=True)
     return df
 
-# def balloons():
-#     balloons = True
+def balloons():
+    balloons = True
 
 # Layout
 st.set_page_config(layout="wide")
@@ -264,7 +264,7 @@ if passwd == 'lightning':
                         data = my_file,
                         file_name = file[5::]+'_'+str(date.today())+'.xlsx',
                         mime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                        # on_click = balloons()
+                         on_click = balloons()
                         )
             # if file.startswith("exec"):
             #     with open(file, 'rb') as my_file: #TODO: need to check for loop logic for wkbk to sheet, ships with offers sheet to offers with ships, single sheet each... need to store this info somehow
@@ -278,5 +278,5 @@ if passwd == 'lightning':
 
 
 
-        # if balloons:
-        #     st.balloons()
+        if balloons:
+            st.balloons()
