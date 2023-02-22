@@ -246,12 +246,12 @@ if passwd == 'lightning':
 
             # set new enter_row
             enter_row += 1
-                ts.title = sheet_name
-                tb.save("temp_"+sheet_name)
+        ts.title = sheet_name
+        tb.save("temp_"+sheet_name)
 
-                # Executive Summary
-                es.title = sheet_name
-                eb.save("exec_"+sheet_name)
+        # Executive Summary
+        es.title = sheet_name
+        eb.save("exec_"+sheet_name)
 
 
         st.success("KACHOW we're done! - - - Download offer sheets below.")
