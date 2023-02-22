@@ -78,157 +78,174 @@ if passwd == 'lightning':
     # This is where the magic happens (when lightning is clicked) - KACHOW
     if clicked == 0:
 
+        # Excel INPUT
+        uploaded_file = 'Open FO Tracking.xlsx'
+        sheet_name = 'Open FO Tracking'
 
         #TODO: form dictionary for lookup tables
         ship_dict = {'DD':'Disney Dream', 'DF':'Disney Fantasy', 'DW':'Disney Wonder', 'DM':'Disney Magic', 'WW':'Disney Wish'}
 
+
         # load lookup data
         lkup_wb = load_workbook(filename = 'LookupWKBK.xlsx', data_only=True)
+        itens_ws = lkup_wb['Itineraries']
+        lkup_itens = range_to_df(itens_ws['A2':'I750'])
+
+        # ports
         lkup_ws = lkup_wb['Lookups']
+        lkup_ports = range_to_df(lkup_ws['E2':'F300'])
+
+        # taxes
         taxes_ws = lkup_wb['Taxes']
-        lkup_itens = range_to_df(lkup_ws['A2':'F350'])
         lkup_taxes = range_to_df(taxes_ws['A1':'F500'])
-        iten_dict, port_dict = {}, {}
-        tax_dict = {'DD':{}, 'DF':{}, 'DM':{}, 'DW':{}, 'WW':{}}
-        portfrom_dict = {'DD':{}, 'DF':{}, 'DM':{}, 'DW':{}, 'WW':{}}
-        for index, row in lkup_itens.iterrows():
-            iten_dict[row['GEOG_AREA_CODE']] = row['Lookup']
-            port_dict[row['Code']] = row['Name']
-        for index, row in lkup_taxes.iterrows():
-            try:
-                tax_dict[row['SHIP']][row['SAIL_FROM']] = row['GVT_TAX']
-                portfrom_dict[row['SHIP']][row['SAIL_FROM']] = row['PORT_FROM']
-            except:
-                continue
+
+        # cabins
+        cabins_ws = lkup_wb['Cabins']
+        lkup_cabins = range_to_df(cabins_ws['A1':'C500'])
+
+        # Loop through submitted files
+        # Load wkbk and sheet
+        wb = load_workbook(filename = uploaded_file, data_only=True)
+
+        # pull Pricing cache file
+        filename = "FO_Pricing_Cache.xlsx"
+        pricing_wb = load_workbook(filename = uploaded_file, data_only=True)
+        pricing_ws = pricing_wb['Cabins']
+        pricing_rg = range_to_df(pricing_ws['A4':'V500'])
+
+        print(pricing_rg)
+
+        #TODO: multiple sheets (one per offer, 'sail' in promoted fills in the lower table row 28, excluding G-J pricing)
+
+        # print("-->", sheet_name, "\n")
+        ws = wb[sheet_name]
+
+        # Call pd convert function
+        input = range_to_df(ws['A3':'AE100'])
+
+        # Rename Columns to be unique (to combine and index)
+        promo_list = ['GT','FLR','MTO','Interline','Cast','DCLCast','TAAP']
+        cols = []
+        promo_ct = -1
+        for column in input.columns:
+            if column in ('V','O','I','Cat.'):
+                if column == "V":
+                    promo_ct+=1
+                cols.append(f'{column.replace(" ", "")}_{promo_list[promo_ct]}')
+            else:
+                cols.append(column)
+        input.columns = cols
+
+        input = input.loc[input['Ship'].notnull()]
+
+        offers = input
 
 
-        # iten_dict = {'WESTERN':'Western Caribbean', 'BAHAMAS':'Bahamas', 'MED':'Mediterranean'}
+        # Pull in template
+        file_path = 'Template_MTO.xlsx' # generic template is called MTO
+        tb = load_workbook(filename = file_path)
+        ts = tb['OUTPUT']
 
-        # set starting row
-        #may need a dict per offer for starting row.... add the val if it doesnt exist, update if it does.
-        # enter_row = 9
-        for uploaded_file in uploaded_files:
-            # Load wkbk and sheet
-            wb = load_workbook(filename = uploaded_file, data_only=True)
-            # Get sheet names
-            worksheets = wb.sheetnames
-            #TODO: multiple sheets (one per offer, 'sail' in promoted fills in the lower table row 28, excluding G-J pricing)
-            for sheet_name in worksheets:
-                ws = wb[sheet_name]
-                if sheet_name in list(row_ct.keys()):
-                    continue
-                else:
-                    row_ct[sheet_name] = 9
-                enter_row = row_ct[sheet_name]
+        enter_row = 9
 
-                # Call pd convert function
-                input = range_to_df(ws['A4':'AE100'])
+        # for colName in colNames:
+        emptyRowCount = 200
+        # offers = input[pd.to_numeric(input[colName], errors='coerce').notnull()]
 
-                # Rename columns that are duplicates
-                for n in ('FVGT', 'VGT', 'IGT', 'OGT'):
-                    cols = []
-                    count = 1
-                    for column in input.columns:
-                        if column == n:
-                            cols.append(f'{n}_{count}')
-                            count+=1
-                            continue
-                        cols.append(column)
-                    input.columns = cols
+        # check if offers is empty (will error on previous line and not update lastoffers)
+        # lastoffers = sheet_name
 
-                print(input.columns)
-                print(input['FVGT_1'])
-                print("========================================")
+        # filter to promo
 
-                # grab all entered rows
-                offers = input[pd.to_numeric(input['FVGT_1'], errors='coerce').notnull()]
-                #TODO: repeat for VGT, OGT, IGT and UNION
+        # offers = input.loc[input['V_'+promo].notnull()]
 
-                # Build output from template (assuming MTO for now) - TODO: list of filepaths
-                if sheet_name in ("CAST","DCL_CAST"):
-                    file_path = 'Template_CAST.xlsx'
-                else:
-                    file_path = 'Template_MTO.xlsx'
-                # TODO: for entries that are both TA and CAST, include in TAAP
+        # separate sail and non sail offers
+        offers_sail = offers[offers['Cat._'+promo]=='Sail']
+        offers = offers[offers['Cat._'+promo]!='Sail']
 
-                # Pull in template
-                tb = load_workbook(filename = file_path)
-                ts = tb['OUTPUT']
+        # filter out empty Cat. rows
+        offers = offers.loc[offers['Cat._'+promo].notnull()]
+        offers_sail = offers_sail.loc[offers_sail['Cat._'+promo].notnull()]
 
-                eb = load_workbook(filename = 'Template_ExecSummary.xlsx')
-                es = tb['OUTPUT']
+        print(offers[['Ship', 'Sailing', 'V_'+promo, 'O_'+promo,'I_'+promo, 'Cat._'+promo]])
 
-                if len(offers) >= 27:
-                    ts.move_range("A27:K39", rows=len(offers)-26) #TODO: does not work
-                for i in range(len(offers)):
-                    #TODO: sailstart will not align with sailfrom .. type error?
-                    if sheet_name in ("CAST","DCL_CAST"):
-                        ts['A7'] = str(date.today())
-                        ship = offers.iloc[i]['Ship']
-                        saildatefrom = offers.iloc[i]['Sail Start']
-                        ts['A'+str(enter_row)] = ship_dict[ship]
-                        ts['B'+str(enter_row)] = saildatefrom
-                        days = offers.iloc[i]['Days']
-                        ts['C'+str(enter_row)] = days
-                        ts['E'+str(enter_row)] = iten_dict[offers.iloc[i]['Destination']]
-                        #TODO: Fill in F for CAT ['Promoted?']
-                        ts['D'+str(enter_row)] = port_dict[portfrom_dict[ship][saildatefrom]].capitalize()
-                        # TODO: check for cat promoted
-                        vf_0 = offers.iloc[i]['FVGT_1']
-                        ts['G'+str(enter_row)] = vf_0
-                        ts['H'+str(enter_row)] = tax_dict[ship][saildatefrom]
-                        grat = 14.5
-                        ts['I'+str(enter_row)] = grat * days
-                        ts['J'+str(enter_row)] = vf_0*days+tax_dict[ship][saildatefrom]+grat
-                        ts['K'+str(enter_row)] = offers.iloc[i]['Comments']
-                        # Pull in TFE info - filter lkup_taxes by ship-sail combo
+        # insert information
+        for i in range(len(offers)):
+            tdy = date.today()
+            first_mon = tdy - datetime.timedelta(days = tdy.weekday())
+            second_mon = tdy + datetime.timedelta(days = -tdy.weekday(), weeks=1)
+            ts['F2'] = promo+" Sheet"
+            ts['F4'] = "Rates Valid Monday, "+str(first_mon)+" through Monday, "+str(second_mon)
 
-                        # Add to Executive Summary
-                        es['B'+str(enter_row)] = ship_dict[offers.iloc[i]['Ship']]
-                        es['C'+str(enter_row)] = offers.iloc[i]['Sail Start']
-                        es['D'+str(enter_row)] = offers.iloc[i]['Days']
-                        es['E'+str(enter_row)] = iten_dict[offers.iloc[i]['Destination']]
-                        es['F'+str(enter_row)] = offers.iloc[i]['Promoted?']
-                        vf_0 = offers.iloc[i]['FVGT_1']
-                        es['G'+str(enter_row)] = vf_0
-                        grat = 14.5
-                        es['J'+str(enter_row)] = vf_0*days+tax_dict[ship][saildatefrom]+grat
-                        # ts['K'+str(enter_row)] = offers.iloc[i]['Comments']
+            ship = offers.iloc[i]['Ship']
+            saildatefrom = offers.iloc[i]['Sailing']
+            iten = lkup_itens[(lkup_itens['SHIP_CODE']==ship)&(lkup_itens['SAIL_DATE_FROM']==saildatefrom)]
+            days = iten['DAYS'].values[0]
+            cattype = offers.iloc[i]['Cat._'+promo]
+            cattypetrans = lkup_cabins[(lkup_cabins['SHIP_CODE']==ship)&(lkup_cabins['CABIN_CATEGORY']==cattype)]['CAT_TYP'].values[0]
+            vf_0 = int(offers.iloc[i][cattypetrans+'_'+promo])
+
+            if "GT" in promo or "Cast" in promo:
+                cattypeadd = "GT"
+            else:
+                cattypeadd = ''
+
+            ts['B'+str(enter_row)] = ship_dict[ship]
+            ts['C'+str(enter_row)] = saildatefrom
+            ts['D'+str(enter_row)] = days
+            ts['E'+str(enter_row)] = iten['FO Sheet Name'].values[0]
+            # ts['E'+str(enter_row)] = iten['FO Sheet Name'].values[0].split(" ending")[0].split(" 2")[0]
+            ts['F'+str(enter_row)] = lkup_ports[lkup_ports['Code'] == iten['PORT_FROM'].values[0]]['Name'].values[0].capitalize()
+            ts['G'+str(enter_row)] = cattype+cattypeadd
+            ts['H'+str(enter_row)] = vf_0
+            ts['I'+str(enter_row)] = vf_0*days
+            ts['J'+str(enter_row)] = 2*vf_0*days
+            ts['K'+str(enter_row)] = lkup_taxes[(lkup_taxes['SHIP']==ship)&(lkup_taxes['SAIL_FROM']==saildatefrom)]['GVT_TAX'].values[0]
+
+            # set new enter_row
+            enter_row += 1
 
 
+        # remove trailing empty rows (cleans up layout)
+        ts.delete_rows(enter_row + 1, emptyRowCount - enter_row)
 
-                        # set new enter_row
-                        enter_row += 1
-                        lower_enter_row = 0 #TODO: add logic for lower part of sheets "Sail" in comments
+        # move down to next empty row
+        enter_row+=3
 
-                    # date = datetime.datetime.strptime(offers.iloc[i]['Sail Start'], '%Y/%m/%d')
-                    # st.write()
-                    # tax_row = lkup_taxes[(lkup_taxes['SHIP']==ship_dict[offers.iloc[i]['Ship']]) & (lkup_taxes['SAIL_FROM']==offers.iloc[i]['Sail Start'])]
-                    else:
-                        tdy = datetime.date.today()
-                        first_mon = tdy - datetime.timedelta(days = tdy.weekday())
-                        second_mon = tdy + datetime.timedelta(days = -tdy.weekday(), weeks=1)
-                        ts['F2'] = str(ws.cell(1, 1).value)+" Sheet"
-                        ts['F4'] = "Rates Valid Monday, "+str(first_mon)+" through Monday, "+str(second_mon)
-                        print(offers.iloc[i])
-                        ship = offers.iloc[i]['Ship']
-                        saildatefrom = offers.iloc[i]['Sail Start']
-                        ts['C'+str(enter_row)] = ship_dict[offers.iloc[i]['Ship']]
-                        ts['D'+str(enter_row)] = offers.iloc[i]['Sail Start']
-                        days = offers.iloc[i]['Days']
-                        ts['E'+str(enter_row)] = days
-                        ts['F'+str(enter_row)] = iten_dict[offers.iloc[i]['Destination']]
-                        ts['G'+str(enter_row)] = port_dict[portfrom_dict[ship][saildatefrom]].capitalize()
-                        ts['H'+str(enter_row)] = offers.iloc[i]['Promoted?']
-                        # TODO: check for cat promoted
-                        vf_0 = int(offers.iloc[i]['VGT_1'])
-                        ts['I'+str(enter_row)] = vf_0
-                        ts['J'+str(enter_row)] = vf_0*days
-                        ts['K'+str(enter_row)] = 2*vf_0*days
-                        # Pull in TFE info - filter lkup_taxes by ship-sail combo
-                        ts['L'+str(enter_row)] = tax_dict[ship][saildatefrom]
-                        # set new enter_row
-                        enter_row += 1
+
+        for i in range(len(offers_sail)):
+            tdy = date.today()
+            first_mon = tdy - datetime.timedelta(days = tdy.weekday())
+            second_mon = tdy + datetime.timedelta(days = -tdy.weekday(), weeks=1)
+            ts['F2'] = promo+" Sheet"
+            ts['F4'] = "Rates Valid Monday, "+str(first_mon)+" through Monday, "+str(second_mon)
+
+            ship = offers_sail.iloc[i]['Ship']
+            saildatefrom = offers_sail.iloc[i]['Sailing']
+            iten = lkup_itens[(lkup_itens['SHIP_CODE']==ship)&(lkup_itens['SAIL_DATE_FROM']==saildatefrom)]
+            days = iten['DAYS'].values[0]
+            # cattype = offers_sail.iloc[i]['Cat._'+promo]
+            # cattypetrans = lkup_cabins[(lkup_cabins['SHIP_CODE']==ship)&(lkup_cabins['CABIN_CATEGORY']==cattype)]['CAT_TYP'].values[0]
+            # vf_0 = int(offers_sail.iloc[i][cattypetrans+'_'+promo])
+
+            if "GT" in promo or "Cast" in promo:
+                cattypeadd = "GT"
+            else:
+                cattypeadd = ''
+
+            ts['B'+str(enter_row)] = ship_dict[ship]
+            ts['C'+str(enter_row)] = saildatefrom
+            ts['D'+str(enter_row)] = days
+            ts['E'+str(enter_row)] = iten['FO Sheet Name'].values[0]
+            # ts['E'+str(enter_row)] = iten['FO Sheet Name'].values[0].split(" ending")[0].split(" 2")[0]
+            ts['F'+str(enter_row)] = lkup_ports[lkup_ports['Code'] == iten['PORT_FROM'].values[0]]['Name'].values[0].capitalize()
+            # ts['H'+str(enter_row)] = vf_0
+            # ts['I'+str(enter_row)] = vf_0*days
+            # ts['J'+str(enter_row)] = 2*vf_0*days
+            ts['K'+str(enter_row)] = lkup_taxes[(lkup_taxes['SHIP']==ship)&(lkup_taxes['SAIL_FROM']==saildatefrom)]['GVT_TAX'].values[0]
+
+            # set new enter_row
+            enter_row += 1
                 ts.title = sheet_name
                 tb.save("temp_"+sheet_name)
 
